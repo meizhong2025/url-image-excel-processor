@@ -1,7 +1,8 @@
+
 services:
   - type: web
-    name: url-image-app
+    name: excel-img-render
     env: python
-    plan: free
-    buildCommand: ""
-    startCommand: gunicorn app:app
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    rootDir: url_image_excel_processor_render
