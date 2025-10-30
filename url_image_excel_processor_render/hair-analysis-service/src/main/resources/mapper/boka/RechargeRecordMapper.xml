@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.hairanalysis.mapper.boka.RechargeRecordMapper">
+
+    <resultMap id="RechargeRecordMap" type="com.example.hairanalysis.model.RechargeRecord">
+        <id property="id" column="id"/>
+        <result property="compId" column="comp_id"/>
+        <result property="billId" column="bill_id"/>
+        <result property="billDate" column="bill_date" jdbcType="DATE"/>
+        <result property="memberCardNo" column="member_card_no"/>
+        <result property="storedAmount" column="stored_amount"/>
+        <result property="mobile" column="mobile"/>
+    </resultMap>
+
+    <sql id="RechargeSelect">
+        SELECT rr.id,
+               rr.comp_id,
+               rr.bill_id,
+               DATE(STR_TO_DATE(rr.bill_date, '%Y-%m-%d %H:%i:%s')) AS bill_date,
+               rr.member_card_no,
+               rr.stored_amount,
+               COALESCE(scr.mobile, card_mobile.mobile) AS mobile
+        FROM bdc_boka_recharge_records rr
+                 LEFT JOIN bdc_boka_sell_card_records scr ON scr.bill_id = rr.bill_id
+                 LEFT JOIN (
+            SELECT d.member_card_no, MAX(r.mobile) AS mobile
+            FROM bdc_boka_sell_card_detail_records d
+                     JOIN bdc_boka_sell_card_records r ON r.bill_id = d.bill_id
+            GROUP BY d.member_card_no
+        ) card_mobile ON card_mobile.member_card_no = rr.member_card_no
+    </sql>
+
+    <select id="findByStoreAndMonth" resultMap="RechargeRecordMap">
+        <include refid="RechargeSelect"/>
+        WHERE rr.comp_id = #{storeId}
+          AND DATE(STR_TO_DATE(rr.bill_date, '%Y-%m-%d %H:%i:%s')) BETWEEN #{startDate} AND #{endDate}
+          AND rr.type = 0
+    </select>
+
+    <select id="findRechargeHistory" resultMap="RechargeRecordMap">
+        <include refid="RechargeSelect"/>
+        WHERE rr.member_card_no = #{cardNo}
+          AND DATE(STR_TO_DATE(rr.bill_date, '%Y-%m-%d %H:%i:%s')) < #{beforeDate}
+          AND rr.type = 0
+        ORDER BY STR_TO_DATE(rr.bill_date, '%Y-%m-%d %H:%i:%s') ASC
+    </select>
+</mapper>
